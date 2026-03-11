@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DK Cutpiece & Textile - POS System</title>
+
+    <!-- Scripts & Styles -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50 flex h-screen overflow-hidden text-gray-800">
+
+    <!-- Sidebar Navigation -->
+    <aside
+        class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col justify-between transition-all duration-300 z-20 flex-shrink-0 no-print">
+        <div>
+            <div class="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-gray-100">
+                <i class="fas fa-store text-brand-600 text-2xl"></i>
+                <span class="ml-3 font-bold text-xl text-gray-800 hidden lg:block tracking-tight">DK Cutpiece</span>
+            </div>
+            <nav class="mt-6 flex flex-col gap-2 px-3">
+                <a href="#"
+                    class="nav-btn active flex items-center px-3 py-3 rounded-lg text-brand-600 bg-brand-50 hover:bg-brand-50 transition-colors"
+                    data-target="pos-section">
+                    <i class="fas fa-calculator text-lg w-6 text-center text-brand-600"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Point of Sale</span>
+                </a>
+                <a href="#"
+                    class="nav-btn flex items-center px-3 py-3 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                    data-target="dashboard-section">
+                    <i class="fas fa-chart-pie text-lg w-6 text-center"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Dashboard</span>
+                </a>
+                <a href="#"
+                    class="nav-btn flex items-center px-3 py-3 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                    data-target="inventory-section">
+                    <i class="fas fa-box-open text-lg w-6 text-center"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Inventory</span>
+                </a>
+                <a href="#"
+                    class="nav-btn flex items-center px-3 py-3 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                    data-target="vendors-section">
+                    <i class="fas fa-truck text-lg w-6 text-center"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Vendors</span>
+                </a>
+                <a href="#"
+                    class="nav-btn flex items-center px-3 py-3 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                    data-target="returns-section">
+                    <i class="fas fa-undo text-lg w-6 text-center"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Returns</span>
+                </a>
+            </nav>
+        </div>
+        <div class="p-3 mb-4">
+            <a href="#"
+                class="nav-btn flex items-center px-3 py-3 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                data-target="settings-section">
+                <i class="fas fa-cog text-lg w-6 text-center"></i>
+                <span class="ml-3 font-medium hidden lg:block">Settings</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <!-- Toast Notification Area -->
+        <div id="toast-container" class="absolute top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+        <!-- POS SECTION -->
+        <section id="pos-section" class="content-section flex h-full active-section">
+            <!-- Product List (Left) -->
+            <div class="flex-1 flex flex-col bg-gray-50 h-full max-h-screen">
+                <header
+                    class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
+                    <h1 class="text-xl font-bold text-gray-800">Checkout</h1>
+                    <div class="relative w-64">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="pos-search" placeholder="Search by name or category..."
+                            class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm">
+                    </div>
+                </header>
+                <div class="flex-1 p-6 overflow-y-auto">
+                    <!-- Categories (Optional quick filters) -->
+                    <div class="flex gap-2 mb-6 overflow-x-auto pb-2" id="pos-categories">
+                        <button
+                            class="px-4 py-1.5 rounded-full bg-brand-600 text-white text-sm font-medium category-filter"
+                            data-category="all">All</button>
+                        <!-- Dynamic categories go here -->
+                    </div>
+                    <!-- Product Grid -->
+                    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="pos-product-list">
+                        <!-- Dynamic products -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart (Right) -->
+            <div class="w-96 bg-white border-l border-gray-200 flex flex-col flex-shrink-0 z-10 shadow-lg lg:shadow-none absolute right-0 top-0 h-full transform transition-transform translate-x-full lg:relative lg:translate-x-0"
+                id="cart-sidebar">
+                <header
+                    class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-shopping-cart text-brand-600 mr-2"></i> Current Order
+                    </h2>
+                    <button class="lg:hidden text-gray-500 hover:text-gray-800"
+                        onclick="document.getElementById('cart-sidebar').classList.add('translate-x-full')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </header>
+
+                <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3" id="cart-items">
+                    <!-- Dynamic cart items -->
+                    <div class="text-center text-gray-400 mt-10" id="empty-cart-msg">
+                        <i class="fas fa-cart-arrow-down text-4xl mb-4 text-gray-300"></i>
+                        <p>Cart is empty</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 border-t border-gray-200 flex-shrink-0">
+                    <div class="flex justify-between mb-2 text-gray-600">
+                        <span>Subtotal</span>
+                        <span class="font-medium" id="cart-subtotal">Rs. 0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-gray-600">Discount</span>
+                        <div class="flex items-center gap-2">
+                            <select id="discount-type"
+                                class="border border-gray-300 rounded pb-1 px-1 text-sm h-8 outline-none">
+                                <option value="flat">Rs.</option>
+                                <option value="percent">%</option>
+                            </select>
+                            <input type="number" id="discount-value" min="0" value="0"
+                                class="w-16 h-8 text-right border border-gray-300 rounded px-2 outline-none focus:ring-1 focus:ring-brand-500">
+                        </div>
+                    </div>
+                    <div class="flex justify-between mb-6 text-xl font-bold text-gray-800">
+                        <span>Total</span>
+                        <span class="text-brand-600" id="cart-total">Rs. 0.00</span>
+                    </div>
+                    <button id="checkout-btn"
+                        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-colors flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-cash-register"></i> Complete Sale
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Cart Toggle -->
+            <button
+                class="absolute bottom-6 right-6 lg:hidden w-14 h-14 bg-brand-600 text-white rounded-full shadow-xl flex items-center justify-center text-xl z-10"
+                onclick="document.getElementById('cart-sidebar').classList.remove('translate-x-full')">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="mobile-cart-badge"
+                    class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">0</span>
+            </button>
+        </section>
+
+        <!-- DASHBOARD SECTION -->
+        <section id="dashboard-section" class="content-section h-full overflow-y-auto hidden">
+            <header class="bg-white border-b border-gray-200 px-8 py-5 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                    <p class="text-gray-500 text-sm mt-1">Overview of today's business</p>
+                </div>
+            </header>
+            <div class="p-8 max-w-7xl mx-auto w-full">
+                <!-- Stats Row -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-center">
+                        <div
+                            class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-2xl mr-4">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium mb-1">Today's Sales</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-sales">Rs. 0.00</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-center">
+                        <div
+                            class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center text-green-600 text-2xl mr-4">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium mb-1">Estimated Net Profit</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-profit">Rs. 0.00</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-center">
+                        <div
+                            class="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 text-2xl mr-4">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium mb-1">Low Stock Items</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-low-stock">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent & Alerts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Low Stock Alerts -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden text-sm">
+                        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                            <h3 class="font-bold text-gray-800">Low Stock Alerts (< 5 units)</h3>
+                                    <button class="text-brand-600 hover:underline"
+                                        onclick="switchTab('inventory-section')">View All</button>
+                        </div>
+                        <div class="p-0">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-xs text-gray-500 uppercase bg-gray-50">
+                                        <th class="px-6 py-3 font-medium">Product</th>
+                                        <th class="px-6 py-3 font-medium">Category</th>
+                                        <th class="px-6 py-3 font-medium text-right">Remaining</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="low-stock-table-body" class="divide-y divide-gray-100">
+                                    <!-- Dynamic rows -->
+                                    <tr>
+                                        <td colspan="3" class="px-6 py-4 text-center text-gray-400">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Sales -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden text-sm">
+                        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                            <h3 class="font-bold text-gray-800">Recent Sales Today</h3>
+                        </div>
+                        <div class="p-0">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-xs text-gray-500 uppercase bg-gray-50">
+                                        <th class="px-6 py-3 font-medium">Time</th>
+                                        <th class="px-6 py-3 font-medium">Items</th>
+                                        <th class="px-6 py-3 font-medium text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-sales-table-body" class="divide-y divide-gray-100">
+                                    <!-- Dynamic rows -->
+                                    <tr>
+                                        <td colspan="3" class="px-6 py-4 text-center text-gray-400">No sales yet today.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- INVENTORY SECTION -->
+        <section id="inventory-section" class="content-section h-full overflow-y-auto hidden">
+            <header
+                class="bg-white border-b border-gray-200 px-8 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Inventory Management</h1>
+                    <p class="text-gray-500 text-sm mt-1">Manage all your store products</p>
+                </div>
+                <button onclick="openModal('product-modal')"
+                    class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Add Product
+                </button>
+            </header>
+            <div class="p-8 max-w-7xl mx-auto w-full">
+                <!-- Data Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                        <div class="relative w-72">
+                            <i
+                                class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="inventory-search" placeholder="Search inventory..."
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left whitespace-nowrap text-sm">
+                            <thead>
+                                <tr class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+                                    <th class="px-6 py-4 font-semibold">Name</th>
+                                    <th class="px-6 py-4 font-semibold">Category</th>
+                                    <th class="px-6 py-4 font-semibold text-right">Stock</th>
+                                    <th class="px-6 py-4 font-semibold text-right">Cost Price</th>
+                                    <th class="px-6 py-4 font-semibold text-right">Selling Price</th>
+                                    <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body" class="divide-y divide-gray-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VENDORS SECTION -->
+        <section id="vendors-section" class="content-section h-full overflow-y-auto hidden">
+            <header class="bg-white border-b border-gray-200 px-8 py-5 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Vendors & Suppliers</h1>
+                    <p class="text-gray-500 text-sm mt-1">Manage your sourcing contacts</p>
+                </div>
+                <button onclick="openModal('vendor-modal')"
+                    class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Add Vendor
+                </button>
+            </header>
+            <div class="p-8 max-w-5xl mx-auto w-full">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left whitespace-nowrap text-sm">
+                            <thead>
+                                <tr class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+                                    <th class="px-6 py-4 font-semibold">Vendor Name</th>
+                                    <th class="px-6 py-4 font-semibold">Contact Number</th>
+                                    <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vendors-table-body" class="divide-y divide-gray-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RETURNS SECTION -->
+        <section id="returns-section" class="content-section h-full overflow-y-auto hidden">
+            <header class="bg-white border-b border-gray-200 px-8 py-5 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Return Sales</h1>
+                    <p class="text-gray-500 text-sm mt-1">Process returns for items sold by piece</p>
+                </div>
+            </header>
+            <div class="p-8 max-w-4xl mx-auto w-full">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-6 border-b border-gray-200 bg-gray-50">
+                        <h3 class="font-bold text-gray-800 mb-4">Process a Return</h3>
+                        <div class="flex gap-4 items-end flex-wrap md:flex-nowrap">
+                            <div class="flex-1 min-w-[200px]">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Select Product (Pieces
+                                    Only)</label>
+                                <select id="return-product-select"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all bg-white">
+                                    <option value="">Select a product...</option>
+                                    <!-- Dynamic options -->
+                                </select>
+                            </div>
+                            <div class="w-24">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                                <input type="number" id="return-qty" min="1" value="1" step="1"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                            </div>
+                            <button id="process-return-btn"
+                                class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2 h-[42px]">
+                                <i class="fas fa-undo"></i> Return Item
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Returns -->
+                <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                        <h3 class="font-bold text-gray-800">Recent Returns</h3>
+                    </div>
+                    <div class="p-0 overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs text-gray-500 uppercase bg-gray-50">
+                                    <th class="px-6 py-3 font-medium">Time</th>
+                                    <th class="px-6 py-3 font-medium">Product</th>
+                                    <th class="px-6 py-3 font-medium text-center">Qty Returned</th>
+                                    <th class="px-6 py-3 font-medium text-right">Refund Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-returns-table-body" class="divide-y divide-gray-100">
+                                <!-- Dynamic rows -->
+                                <tr>
+                                    <td colspan="4" class="px-6 py-4 text-center text-gray-400">No returns recorded yet.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SETTINGS SECTION -->
+        <section id="settings-section" class="content-section h-full overflow-y-auto hidden">
+            <header class="bg-white border-b border-gray-200 px-8 py-5">
+                <h1 class="text-2xl font-bold text-gray-800">System Settings</h1>
+                <p class="text-gray-500 text-sm mt-1">Data backup and management</p>
+            </header>
+            <div class="p-8 max-w-3xl mx-auto w-full">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                    <h3 class="text-lg font-bold text-gray-800 border-b border-gray-100 pb-4 mb-6"><i
+                            class="fas fa-database text-brand-500 mr-2"></i> Data Backup & Restore</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Export Data</h4>
+                            <p class="text-sm text-gray-500 mb-4">Download a complete backup of your database (Products,
+                                Vendors, and Sales) to a JSON file.</p>
+                            <button id="export-btn"
+                                class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full flex justify-center items-center gap-2">
+                                <i class="fas fa-download"></i> Export Database Backup
+                            </button>
+                        </div>
+
+                        <div class="border-t md:border-t-0 md:border-l border-gray-100 md:pl-8 pt-6 md:pt-0">
+                            <h4 class="font-semibold text-gray-700 mb-2">Import Data</h4>
+                            <p class="text-sm text-gray-500 mb-4">Restore your database from an existing JSON backup
+                                file. <span class="text-red-500 font-medium">Warning: This will overwrite current
+                                    data.</span></p>
+                            <div class="relative">
+                                <input type="file" id="import-file" accept=".json" class="hidden">
+                                <button onclick="document.getElementById('import-file').click()"
+                                    class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full flex justify-center items-center gap-2 border border-gray-300">
+                                    <i class="fas fa-upload"></i> Select Backup File
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODALS -->
+
+    <!-- Product Modal -->
+    <div id="product-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity opacity-0">
+        <div
+            class="bg-white rounded-2xl shadow-xl w-full max-w-2xl transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="text-lg font-bold text-gray-800" id="product-modal-title">Add New Product</h2>
+                <button onclick="closeModal('product-modal')"
+                    class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto w-full">
+                <form id="product-form" class="space-y-4">
+                    <input type="hidden" id="product-id">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
+                            <input type="text" id="product-name" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                            <!-- Datalist allows free text or selection -->
+                            <input type="text" id="product-category" required list="category-list"
+                                placeholder="e.g., Silk, Cotton"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                            <datalist id="category-list">
+                                <option value="Silk">
+                                <option value="Cotton">
+                                <option value="Cutpiece">
+                                <option value="Linen">
+                                <option value="Sarees">
+                            </datalist>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</label>
+                            <select id="product-unit" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all bg-white">
+                                <option value="Meters">Meters</option>
+                                <option value="Pieces">Pieces</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                            <select id="product-vendor"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all bg-white">
+                                <option value="">Select a vendor...</option>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Current Stock Quantity *</label>
+                            <input type="number" id="product-stock" min="0" step="0.01" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                        </div>
+
+                        <div class="col-span-2 mt-4 pt-4 border-t border-gray-100">
+                            <h4 class="text-sm font-bold text-gray-700 mb-3">Pricing</h4>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cost Price (Rs.) *</label>
+                            <input type="number" id="product-cost" min="0" step="0.01" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                        </div>
+
+                        <div class="flex gap-2 items-end">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Target Margin (%)</label>
+                                <input type="number" id="product-margin" min="0" placeholder="e.g., 20"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                            </div>
+                            <button type="button" id="calc-price-btn"
+                                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm border border-gray-300 transition-colors"
+                                title="Calculate Selling Price">
+                                <i class="fas fa-calculator"></i>
+                            </button>
+                        </div>
+
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Selling Price (Rs.) *</label>
+                            <input type="number" id="product-selling" min="0" step="0.01" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 mt-auto">
+                <button type="button" onclick="closeModal('product-modal')"
+                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">Cancel</button>
+                <button type="submit" form="product-form"
+                    class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors shadow-sm">Save
+                    Product</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendor Modal -->
+    <div id="vendor-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity opacity-0">
+        <div
+            class="bg-white rounded-2xl shadow-xl w-full max-w-md transform scale-95 transition-transform duration-300 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="text-lg font-bold text-gray-800" id="vendor-modal-title">Add New Vendor</h2>
+                <button onclick="closeModal('vendor-modal')"
+                    class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 inline-block w-full">
+                <form id="vendor-form" class="space-y-4">
+                    <input type="hidden" id="vendor-id">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Vendor Name *</label>
+                        <input type="text" id="vendor-name" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+                        <input type="text" id="vendor-contact"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                <button type="button" onclick="closeModal('vendor-modal')"
+                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">Cancel</button>
+                <button type="submit" form="vendor-form"
+                    class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors shadow-sm">Save
+                    Vendor</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- HIDDEN PRINT RECEIPT -->
+    <div id="print-receipt" class="hidden font-mono text-sm leading-relaxed p-4 bg-white text-black max-w-sm mx-auto">
+        <div class="text-center border-b border-black pb-2 mb-2">
+            <h1 class="text-xl font-bold uppercase">DK Cutpiece & Textile</h1>
+            <p>123 Main Street, City</p>
+            <p>Phone: +94 12 345 6789</p>
+        </div>
+        <div class="mb-2 flex justify-between text-xs">
+            <span>Date: <span id="r-date"></span></span>
+            <span>Inv #: <span id="r-inv"></span></span>
+        </div>
+        <table class="w-full mb-2">
+            <thead class="border-y border-black text-left">
+                <tr>
+                    <th class="py-1 w-1/2">Item</th>
+                    <th class="py-1 text-center">Qty</th>
+                    <th class="py-1 text-right">Amt</th>
+                </tr>
+            </thead>
+            <tbody id="r-items" class="border-b border-black pb-2">
+                <!-- dynamic items -->
+            </tbody>
+        </table>
+        <div class="flex justify-between font-bold text-base mt-2">
+            <span>Total:</span>
+            <span id="r-total"></span>
+        </div>
+        <div class="flex justify-between text-xs mt-1" id="r-discount-row" style="display:none;">
+            <span>Discount:</span>
+            <span id="r-discount"></span>
+        </div>
+        <div class="text-center mt-6 text-xs italic">
+            <p>Thank you for your business!</p>
+            <p>Goods once sold cannot be returned.</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

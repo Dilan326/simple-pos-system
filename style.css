@@ -1,0 +1,125 @@
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Animations & Transitions */
+.content-section {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.content-section.active-section {
+    display: flex !important;
+}
+
+.content-section:not(.active-section) {
+    display: none !important;
+}
+
+/* Override block display for non-flex sections */
+#dashboard-section.active-section,
+#inventory-section.active-section,
+#vendors-section.active-section,
+#returns-section.active-section,
+#settings-section.active-section {
+    display: block !important;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Product Card Hover Effect */
+.product-card {
+    transition: all 0.2s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Click feedback effect */
+.product-card:active {
+    transform: scale(0.98);
+}
+
+/* Modal Animations */
+.modal-active {
+    display: flex !important;
+    opacity: 1 !important;
+    animation: fadeInModal 0.2s ease-out;
+}
+
+.modal-active>div {
+    transform: scale(1) !important;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Print Styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #print-receipt,
+    #print-receipt * {
+        visibility: visible;
+    }
+
+    #print-receipt {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+}
